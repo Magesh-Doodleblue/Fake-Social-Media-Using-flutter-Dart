@@ -123,7 +123,7 @@ class _MobileAuthPageState extends State<MobileAuthPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => HomePage(),
+            builder: (context) => const HomePage(),
           ),
         );
       } else {
@@ -136,11 +136,6 @@ class _MobileAuthPageState extends State<MobileAuthPage> {
             content: Text('User Created'),
           ),
         );
-        // final user = FirebaseAuth.instance.currentUser;
-        // await FirebaseFirestore.instance
-        //     .collection('users')
-        //     .doc(user!.uid)
-        //     .set({'name': nameController.text.trim()});
         final user = FirebaseAuth.instance.currentUser;
         await FirebaseFirestore.instance
             .collection('users')

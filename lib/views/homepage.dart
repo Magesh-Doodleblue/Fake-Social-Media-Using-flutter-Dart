@@ -1,13 +1,80 @@
-// // ignore_for_file: avoid_print, use_build_context_synchronously
+import 'dart:io';
 
-// ignore_for_file: use_build_context_synchronously, avoid_print
-
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/material.dart';
+// ignore_for_file: avoid_print, use_build_context_synchronously
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  Future<void> uploadFiles(
+      BuildContext context, String uid, String userName) async {
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result == null || result.count == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No file selected'),
+        ),
+      );
+      return;
+    }
+
+    List<File> selectedFiles =
+        result.files.map((file) => File(file.path!)).toList();
+
+    final storage = FirebaseStorage.instance;
+    final storageRef = storage.ref().child('files/$uid/');
+
+    List<String> fileUrls = [];
+
+    for (var i = 0; i < selectedFiles.length; i++) {
+      File file = selectedFiles[i];
+      final fileName = file.path.split('/').last;
+      final fileBytes = await file.readAsBytes();
+
+      if (fileBytes.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('File data could not be loaded'),
+          ),
+        );
+        continue;
+      }
+
+      final fileRef = storageRef.child(fileName);
+      try {
+        final uploadTask = fileRef.putData(fileBytes);
+        final snapshot = await uploadTask.whenComplete(() {});
+        final downloadUrl = await snapshot.ref.getDownloadURL();
+        fileUrls.add(downloadUrl);
+        print("File URL uploaded successfully: $downloadUrl");
+      } catch (e) {
+        print("Error uploading file $fileName: $e");
+        continue;
+      }
+    }
+
+    final firestore = FirebaseFirestore.instance;
+    final userRef = firestore.collection('users').doc(uid);
+
+    try {
+      await userRef.set({
+        'username': userName,
+        'files': fileUrls,
+      }, SetOptions(merge: true));
+      print("User data uploaded successfully");
+    } catch (e) {
+      print("Error uploading user data: $e");
+    }
+  }
 
   Future<void> _signOut(BuildContext context, User? user) async {
     try {
@@ -63,6 +130,19 @@ class HomePage extends StatelessWidget {
                 const SizedBox(height: 16.0),
                 Text('Your user ID is: ${user.uid}'),
                 const SizedBox(height: 16.0),
+
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      await uploadFiles(context, user.uid, name);
+                      print('Files uploaded successfully');
+                    } catch (e) {
+                      print('Error uploading files: $e');
+                    }
+                  },
+                  child: const Text('Upload Files'),
+                ),
+                // const UserList(),
                 ElevatedButton(
                   onPressed: () {
                     _signOut(context, user);
