@@ -5,6 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+
+import 'all_files_firebase.dart';
+
 // ignore_for_file: avoid_print, use_build_context_synchronously
 
 class HomePage extends StatefulWidget {
@@ -158,9 +161,17 @@ class _HomePageState extends State<HomePage> {
         future:
             FirebaseFirestore.instance.collection('users').doc(user!.uid).get(),
         builder: (context, snapshot) {
+          //
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+                child: Column(
+              children: const [
+                CircularProgressIndicator(),
+                Text("Something went wrong"),
+              ],
+            ));
           }
+
           final data = snapshot.data?.data() ?? {};
           final name = data['name'];
           print('User ID: ${user.uid}');
@@ -178,6 +189,7 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: userDetailsColumnData(name, user, context),
                 ),
+                // const Expanded(child: UserFilesList()),
                 Expanded(child: gettingPostFromFirebase(user, name)),
               ],
             ),
@@ -215,6 +227,16 @@ class _HomePageState extends State<HomePage> {
           },
           child: const Text('Upload Files'),
         ),
+        ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UserFilesList(),
+                ),
+              );
+            },
+            child: const Text("See all the files"))
       ],
     );
   }
@@ -228,8 +250,13 @@ class _HomePageState extends State<HomePage> {
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Center(
-            child: CircularProgressIndicator(),
+          return Center(
+            child: Column(
+              children: const [
+                CircularProgressIndicator(),
+                Text("Something went wrong"),
+              ],
+            ),
           );
         }
         final data = snapshot.data?.data() as Map<String, dynamic>?;
@@ -245,27 +272,29 @@ class _HomePageState extends State<HomePage> {
           itemBuilder: (context, index) {
             return Padding(
               padding: const EdgeInsets.all(8.0),
-              child: Container(
-                decoration: BoxDecoration(
-                    border: Border.all(
-                        width: 2, color: Colors.black.withOpacity(0.3))),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Name: $name',
-                      style: const TextStyle(fontSize: 22),
-                    ),
-                    Text('User ID: ${user.uid}'),
-                    Center(
-                      child: Image.network(
-                        files[index],
-                        width: 250,
-                        height: 200,
-                        fit: BoxFit.cover,
+              child: Card(
+                child: Container(
+                  decoration: BoxDecoration(
+                      border: Border.all(
+                          width: 2, color: Colors.black.withOpacity(0.3))),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Text(
+                      //   'Name: $name',
+                      //   style: const TextStyle(fontSize: 22),
+                      // ),
+                      // Text('User ID: ${user.uid}'),
+                      Center(
+                        child: Image.network(
+                          files[index],
+                          width: 250,
+                          height: 200,
+                          fit: BoxFit.cover,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );

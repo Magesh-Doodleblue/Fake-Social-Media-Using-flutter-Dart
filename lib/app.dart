@@ -15,7 +15,6 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.teal,
       ),
-      // home: PhoneNumberVerificationPage(),
       home: const MobileAuthPage(),
     );
   }
