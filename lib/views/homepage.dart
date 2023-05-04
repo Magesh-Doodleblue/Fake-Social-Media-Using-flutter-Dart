@@ -189,7 +189,6 @@ class _HomePageState extends State<HomePage> {
                   padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: userDetailsColumnData(name, user, context),
                 ),
-                // const Expanded(child: UserFilesList()),
                 Expanded(child: gettingPostFromFirebase(user, name)),
               ],
             ),
