@@ -12,12 +12,15 @@ class UserFilesList extends StatefulWidget {
 }
 
 class _UserFilesListState extends State<UserFilesList> {
+  // late Future<void> _future;
+  late Future<void> _future = Future.value(null);
+
   List<Map<String, dynamic>> filesList = [];
 
   @override
   void initState() {
-    getFilesList();
     super.initState();
+    _future = getFilesList();
   }
 
   Future<void> getFilesList() async {
@@ -44,44 +47,55 @@ class _UserFilesListState extends State<UserFilesList> {
       appBar: AppBar(
         title: const Text('User Files List'),
       ),
-      body: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 1,
-          crossAxisSpacing: 5.0,
-          mainAxisSpacing: 5.0,
-        ),
-        itemCount: filesList.length,
-        itemBuilder: (BuildContext context, int index) {
-          return Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Card(
-              color: const Color.fromARGB(255, 162, 240, 233),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      filesList[index]['name'],
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: PhotoView(
-                      //user can zoom the image.
-                      imageProvider: NetworkImage(
-                        filesList[index]['file'],
-                      ),
-                    ),
-                  ),
-                ],
+      body: FutureBuilder(
+        future: _future,
+        builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          } else {
+            return GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 1,
+                crossAxisSpacing: 5.0,
+                mainAxisSpacing: 5.0,
               ),
-            ),
-          );
+              itemCount: filesList.length,
+              itemBuilder: (BuildContext context, int index) {
+                return Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Card(
+                    color: const Color.fromARGB(255, 162, 240, 233),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            filesList[index]['name'],
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: PhotoView(
+                            //user can zoom the image.
+                            imageProvider: NetworkImage(
+                              filesList[index]['file'],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          }
         },
       ),
     );

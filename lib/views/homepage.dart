@@ -228,15 +228,16 @@ class _HomePageState extends State<HomePage> {
           child: const Text('Upload Files'),
         ),
         ElevatedButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const UserFilesList(),
-                ),
-              );
-            },
-            child: const Text("See all the files"))
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const UserFilesList(),
+              ),
+            );
+          },
+          child: const Text("See all the files"),
+        ),
       ],
     );
   }
@@ -269,6 +270,7 @@ class _HomePageState extends State<HomePage> {
         }
         return ListView.builder(
           itemCount: files.length,
+          reverse: true,
           itemBuilder: (context, index) {
             return Padding(
               padding: const EdgeInsets.all(8.0),
