@@ -66,9 +66,13 @@ class _HomePageState extends State<HomePage> {
     final userRef = firestore.collection('users').doc(uid);
 
     try {
+      final userData = await userRef.get();
+      final existingFileUrls = List<String>.from(userData.get('files'));
+      existingFileUrls.addAll(fileUrls);
+
       await userRef.set({
-        'username': userName,
-        'files': fileUrls,
+        // 'username': userName,
+        'files': existingFileUrls,
       }, SetOptions(merge: true));
       print("User data uploaded successfully");
     } catch (e) {
@@ -77,33 +81,78 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _signOut(BuildContext context, User? user) async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      user = null;
-      print(user);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Signed out successfully.'),
-        ),
-      );
-      Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
-      print('Failed to sign out: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to sign out: $e'),
-        ),
-      );
-    }
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          content: const Text("Do you want to Logout?"),
+          title: const Text("Logout?"),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () async {
+                    try {
+                      await FirebaseAuth.instance.signOut();
+                      user = null;
+                      print(user);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Signed out successfully.'),
+                        ),
+                      );
+                      Navigator.pop(context);
+                      Navigator.pop(context);
+                    } on FirebaseAuthException catch (e) {
+                      print('Failed to sign out: $e');
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to sign out: $e'),
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text("Yes"),
+                ),
+                const SizedBox(
+                  width: 20,
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text("No"),
+                ),
+              ],
+            )
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
         automaticallyImplyLeading: false,
+        actions: [
+          TextButton(
+            onPressed: () {
+              _signOut(context, user);
+            },
+            child: const Text(
+              "Logout",
+              style: TextStyle(
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
       ),
       body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         future:
@@ -124,36 +173,105 @@ class _HomePageState extends State<HomePage> {
           }
           return Center(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Welcome, $name!'),
-                const SizedBox(height: 16.0),
-                Text('Your user ID is: ${user.uid}'),
-                const SizedBox(height: 16.0),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    try {
-                      await uploadFiles(context, user.uid, name);
-                      print('Files uploaded successfully');
-                    } catch (e) {
-                      print('Error uploading files: $e');
-                    }
-                  },
-                  child: const Text('Upload Files'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: userDetailsColumnData(name, user, context),
                 ),
-                // const UserList(),
-                ElevatedButton(
-                  onPressed: () {
-                    _signOut(context, user);
-                  },
-                  child: const Text("Logout"),
-                ),
+                Expanded(child: gettingPostFromFirebase(user, name)),
               ],
             ),
           );
         },
       ),
+    );
+  }
+
+  Column userDetailsColumnData(name, User user, BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: [
+        const SizedBox(
+          height: 30,
+        ),
+        Text(
+          'Welcome, $name!',
+          style: const TextStyle(fontSize: 23),
+        ),
+        const SizedBox(height: 16.0),
+        Text(
+          'Your user ID is: ${user.uid}',
+          style: const TextStyle(fontSize: 16),
+        ),
+        const SizedBox(height: 16.0),
+        ElevatedButton(
+          onPressed: () async {
+            try {
+              await uploadFiles(context, user.uid, name);
+              print('Files uploaded successfully');
+            } catch (e) {
+              print('Error uploading files: $e');
+            }
+          },
+          child: const Text('Upload Files'),
+        ),
+      ],
+    );
+  }
+
+  StreamBuilder<DocumentSnapshot<Object?>> gettingPostFromFirebase(
+      User user, name) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+        final data = snapshot.data?.data() as Map<String, dynamic>?;
+        final files =
+            (data?['files'] as List?)?.map((file) => file.toString()).toList();
+        if (files == null || files.isEmpty) {
+          return const Center(
+            child: Text('No files uploaded yet.'),
+          );
+        }
+        return ListView.builder(
+          itemCount: files.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Container(
+                decoration: BoxDecoration(
+                    border: Border.all(
+                        width: 2, color: Colors.black.withOpacity(0.3))),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Name: $name',
+                      style: const TextStyle(fontSize: 22),
+                    ),
+                    Text('User ID: ${user.uid}'),
+                    Center(
+                      child: Image.network(
+                        files[index],
+                        width: 250,
+                        height: 200,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
